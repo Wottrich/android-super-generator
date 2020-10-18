@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">SuperGenerator</string>
+    <string name="activity_overview_hint_generated_numbers">Numeros gerados aparecerão aqui</string>
+
+    <string name="click_to_copy">Clique para copiar</string>
+    <string name="generate_numbers">Gerar numeros</string>
+    <string name="smaller_number">Menor numero</string>
+    <string name="bigger_number">Maior numero</string>
+    <string name="copied_numbers">Numeros copiados!</string>
+    <string name="good_lucky">Boa sorte!</string>
+    <string name="error_unknown">Ocorreu um erro</string>
+
+    <string name="error_min_is_bigger_then_max">Numero minimo não pode ser maior que o numero maximo</string>
+    <string name="error_number_to_generate_is_smaller_then_numbers_between_min_max">O máximo de numeros para gerar é menor que os numeros disponiveis.</string>
+    <string name="max_generated_number_hint">Máximo de numeros gerados</string>
+
 </resources>

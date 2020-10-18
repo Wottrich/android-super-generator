@@ -1,9 +1,14 @@
 package io.github.wottrich.viewModel
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import io.github.wottrich.R
+import io.github.wottrich.extensions.appendItems
 import io.github.wottrich.models.ControlNumber
+import io.github.wottrich.util.DefaultNumbers
+import io.github.wottrich.util.RandomNumber
 
 /**
  * @author Wottrich
@@ -13,70 +18,94 @@ import io.github.wottrich.models.ControlNumber
  * Copyright © 2020 SuperGenerator. All rights reserved.
  *
  */
- 
+
 class OverviewViewModel : ViewModel() {
 
-    val validMinMaxNumbers: Boolean
-        get() = minNumberOrZero < maxNumberOrZero
+    //Public variables
+    val isValidToGenerateNumbers: Boolean
+        get() = minIsNotBiggerThenMax && isValidTotalNumberToGenerate
 
-    val minNumber = MutableLiveData<String>("1")
-    val maxNumber = MutableLiveData<String>("60")
+    //LiveData's
+    val minNumber = MutableLiveData<String>(DefaultNumbers.defaultMinNumberGenerated.toString())
+    val maxNumber = MutableLiveData<String>(DefaultNumbers.defaultMaxNumberGenerated.toString())
+    val numberToGenerate = MutableLiveData<String>(DefaultNumbers.defaultNumberToGenerate.toString())
 
     private val _finalNumbers = MutableLiveData<String>()
     val finalNumbers: LiveData<String> = _finalNumbers
+    private val _imLuckyNumbers = MutableLiveData<String>()
+    val imLuckyNumbers: LiveData<String> = _imLuckyNumbers
 
-    private val maxNumberGenerated = 6
+    //Private variables
     private val numbers = mutableListOf<ControlNumber>()
 
+    private val numbersBetweenMinAndMax
+        get() = maxNumberOrZero - minNumberOrZero
+
+    private val isValidTotalNumberToGenerate
+        get() = numbersBetweenMinAndMax >= _numberToGenerate
+
+    private val minIsNotBiggerThenMax
+        get() = numbersBetweenMinAndMax > 0
+
+    private val _numberToGenerate
+        get() = (numberToGenerate.value ?: "0").toInt()
+
     private val minNumberOrZero
-        get() = minNumber.value?.toInt() ?: 0
+        get() = minNumber.value.takeIf { it != null && it.isNotEmpty() }?.toInt() ?: 0
 
     private val maxNumberOrZero
-        get() = maxNumber.value?.toInt() ?: 0
+        get() = maxNumber.value.takeIf { it != null && it.isNotEmpty() }?.toInt() ?: 0
+
+    //Public functions
+    fun imLucky() {
+        handleNumbers()
+        _imLuckyNumbers.value = formatNumbers()
+    }
 
     fun generateNumbers() {
-        clearNumbers()
-        managerNumbers()
+        handleNumbers()
         _finalNumbers.value = formatNumbers()
+    }
+
+    @StringRes
+    fun invalidGenerateNumberMessage(): Int {
+        if (!minIsNotBiggerThenMax) {
+            return R.string.error_min_is_bigger_then_max
+        }
+
+        if (!isValidTotalNumberToGenerate) {
+            return R.string.error_number_to_generate_is_smaller_then_numbers_between_min_max
+        }
+
+        return R.string.error_unknown
+    }
+
+    //Private functions
+    private fun handleNumbers() {
+        clearNumbers()
+        buildRandomNumbers()
     }
 
     private fun clearNumbers() {
         numbers.clear()
     }
 
-    private fun formatNumbers(): String {
-        val stringAppend = StringBuffer()
-        var first = true
-        numbers.forEach {
-            if (first) {
-                first = false
-                stringAppend.append(it.number)
-            } else {
-                stringAppend.append("-").append(it.number)
-            }
-        }
-        return stringAppend.toString()
-    }
+    private fun formatNumbers() = numbers.appendItems("-") { it.number.toString() }
 
-    private fun managerNumbers() {
-        val numberGenerated = getNumberNotContainsInList()
-        numbers.add(ControlNumber(number = numberGenerated))
-        if (numbers.size != maxNumberGenerated) {
-            managerNumbers()
+    private fun buildRandomNumbers() {
+        numbers.addRandomNumberIfNotContains()
+        if (numbers.size != _numberToGenerate) {
+            buildRandomNumbers()
         }
     }
 
-    private fun getNumberNotContainsInList(): Int {
-        val generatedNumber = random(minNumberOrZero, maxNumberOrZero)
-        return if (numbers.map { it.number }.contains(generatedNumber)) {
-            getNumberNotContainsInList()
+    private fun MutableList<ControlNumber>.addRandomNumberIfNotContains() {
+        val generatedNumber = RandomNumber.random(minNumberOrZero, maxNumberOrZero)
+        if (this.map { it.number }.contains(generatedNumber)) {
+            addRandomNumberIfNotContains()
         } else {
-            generatedNumber
+            add(ControlNumber(number = generatedNumber))
         }
-    }
-
-    private fun random(start: Int, end: Int): Int {
-        return (start..end).random()
     }
 
 }

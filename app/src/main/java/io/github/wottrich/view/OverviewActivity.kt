@@ -1,22 +1,26 @@
 package io.github.wottrich.view
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.viewModels
+import android.view.WindowManager
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import io.github.wottrich.R
 import io.github.wottrich.databinding.ActivityOverviewBinding
+import io.github.wottrich.extensions.copyText
+import io.github.wottrich.extensions.toast
 import io.github.wottrich.viewModel.OverviewViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
+
 
 class OverviewActivity : AppCompatActivity() {
 
-    private val viewModel by viewModels<OverviewViewModel>()
+    private val viewModel by viewModel<OverviewViewModel>()
     private lateinit var binding: ActivityOverviewBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = ContextCompat.getColor(this, R.color.status_bar_color)
         super.onCreate(savedInstanceState)
         binding = ActivityOverviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -33,27 +37,31 @@ class OverviewActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        val mViewModel = viewModel
+        val overviewActivity = this
         binding.apply {
 
             btnGenerate.setOnClickListener {
-                if (mViewModel.validMinMaxNumbers) {
-                    mViewModel.generateNumbers()
-                } else {
-                    Toast.makeText(
-                        this@OverviewActivity,
-                        "Numero minimo não pode ser maior que o numero maximo",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                isValidToGenerate {
+                    overviewActivity.viewModel.generateNumbers()
                 }
             }
 
+            btnImLucky.setOnClickListener {
+                isValidToGenerate {
+                    overviewActivity.viewModel.imLucky()
+                }
+            }
+
+            btnShowNumbers.setOnClickListener {
+                handleLuckyNumbersLayout(false)
+            }
+
             tvNumbers.setOnClickListener {
-                copyText()
+                overviewActivity.copyText(tvNumbers.text.toString())
             }
 
             tvInfoCopy.setOnClickListener {
-                copyText()
+                overviewActivity.copyText(tvNumbers.text.toString())
             }
 
         }
@@ -62,19 +70,28 @@ class OverviewActivity : AppCompatActivity() {
 
     private fun setupObservers() {
         viewModel.finalNumbers.observe(this) {
-            val string = it ?: "Ocorreu um erro"
+            val string = it ?: getString(R.string.error_unknown)
+            binding.tvNumbers.text = string
+        }
+
+        viewModel.imLuckyNumbers.observe(this) {
+            val string = it ?: getString(R.string.error_unknown)
+            copyText(string)
+            handleLuckyNumbersLayout(true)
             binding.tvNumbers.text = string
         }
     }
 
-    private fun copyText() {
-        val numbers = binding.tvNumbers.text.toString()
+    private fun handleLuckyNumbersLayout(show: Boolean) {
+        binding.viewHideNumbers.isVisible = show
+        binding.btnShowNumbers.isVisible = show
+    }
 
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-
-        val clipData = ClipData.newPlainText("Boa sorte!", numbers)
-        clipboard.setPrimaryClip(clipData)
-        Toast.makeText(this, "Numeros copiados!", Toast.LENGTH_SHORT).show()
-
+    private fun isValidToGenerate(valid: () -> Unit) {
+        if (viewModel.isValidToGenerateNumbers) {
+            valid()
+        } else {
+            toast(viewModel.invalidGenerateNumberMessage())
+        }
     }
 }
